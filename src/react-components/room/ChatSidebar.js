@@ -5,18 +5,19 @@ import { Sidebar } from "../sidebar/Sidebar";
 import { CloseButton } from "../input/CloseButton";
 import { ReactComponent as WandIcon } from "../icons/Wand.svg";
 import { ReactComponent as AttachIcon } from "../icons/Attach.svg";
-import { ReactComponent as ChatIcon } from "../icons/Chat.svg";
 import { ReactComponent as SendIcon } from "../icons/Send.svg";
 import { ReactComponent as ReactionIcon } from "../icons/Reaction.svg";
+import { ReactComponent as ShareIcon } from "../icons/Share.svg";
 import { IconButton } from "../input/IconButton";
 import { TextAreaInput } from "../input/TextAreaInput";
-import { ToolbarButton } from "../input/ToolbarButton";
 import { Popover } from "../popover/Popover";
 import { EmojiPicker } from "./EmojiPicker";
 import styles from "./ChatSidebar.scss";
 import { formatMessageBody } from "../../utils/chat-message";
 import { FormattedMessage, useIntl, defineMessages, FormattedRelativeTime } from "react-intl";
 import { permissionMessage } from "./PermissionNotifications";
+import { share } from "../../utils/share";
+import configs from "../../utils/configs";
 
 export function SpawnMessageButton(props) {
   return (
@@ -61,11 +62,13 @@ export const EmojiPickerPopoverButton = React.memo(({ onSelectEmoji, disabled })
   return (
     <Popover
       title=""
+      popoverClass={styles.emojiPopover}
+      showHeader={false}
       content={({ closePopover }) => (
         <EmojiPicker
-          onSelect={emoji => {
+          onEmojiClick={emoji => {
             const keepPickerOpen = shiftKeyDown.current;
-            onSelectEmoji({ emoji, pickerRemainedOpen: keepPickerOpen });
+            onSelectEmoji({ emoji: emoji.emoji, pickerRemainedOpen: keepPickerOpen });
             // Keep the picker open if the Shift key was held down to allow
             // for multiple emoji selections.
             if (!keepPickerOpen) closePopover();
@@ -377,7 +380,21 @@ MessageBubble.propTypes = {
   permission: PropTypes.bool
 };
 
-function getMessageComponent(message) {
+function getMessageComponent(message, intl) {
+  const onShareClick = async () => {
+    try {
+      await share({
+        url: message.body?.src,
+        title: intl.formatMessage(
+          { id: "photo-message.default-tweet", defaultMessage: "Taken in {shareHashtag}" },
+          { shareHashtag: configs.translation("share-hashtag") }
+        )
+      });
+    } catch (error) {
+      console.error(`while sharing (from chat sidebar):`, error);
+    }
+  };
+
   switch (message.type) {
     case "chat": {
       const { formattedBody, monospace, emoji } = formatMessageBody(message.body);
@@ -389,16 +406,34 @@ function getMessageComponent(message) {
     }
     case "video":
       return (
-        <MessageBubble key={message.id} media>
-          <video controls src={message.body.src} />
-        </MessageBubble>
+        <div className={styles.messageRow}>
+          <MessageBubble key={message.id} media>
+            <video controls src={message.body.src} />
+          </MessageBubble>
+          <IconButton
+            className={styles.iconButton}
+            onClick={onShareClick}
+            title={intl.formatMessage({ id: "share-popover.title", defaultMessage: "Share" })}
+          >
+            <ShareIcon />
+          </IconButton>
+        </div>
       );
     case "image":
     case "photo":
       return (
-        <MessageBubble key={message.id} media>
-          <img src={message.body.src} />
-        </MessageBubble>
+        <div className={styles.messageRow}>
+          <MessageBubble key={message.id} media>
+            <img src={message.body.src} />
+          </MessageBubble>
+          <IconButton
+            className={styles.iconButton}
+            onClick={onShareClick}
+            title={intl.formatMessage({ id: "share-popover.title", defaultMessage: "Share" })}
+          >
+            <ShareIcon />
+          </IconButton>
+        </div>
       );
     case "permission":
       return (
@@ -492,14 +527,3 @@ ChatSidebar.propTypes = {
   children: PropTypes.node,
   listRef: PropTypes.func
 };
-
-export function ChatToolbarButton(props) {
-  return (
-    <ToolbarButton
-      {...props}
-      icon={<ChatIcon />}
-      preset="accent4"
-      label={<FormattedMessage id="chat-toolbar-button" defaultMessage="Chat" />}
-    />
-  );
-}

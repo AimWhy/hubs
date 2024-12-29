@@ -1,4 +1,4 @@
-import ReactDOM from "react-dom";
+import { createRoot } from "react-dom/client";
 import React from "react";
 import "./utils/configs";
 import "./react-components/styles/global.scss";
@@ -64,7 +64,7 @@ function HubsCloudPage() {
               </Button>
             </div>
             <div className={classNames(styles.getStarted, styles.center)}>
-              <Button as="a" preset="transparent" href="https://hubs.mozilla.com/docs/hubs-cloud-aws-quick-start.html">
+              <Button as="a" preset="transparent" href="https://hubsfoundation.org/hubs-cloud-aws-quick-start.html">
                 <FormattedMessage id="hubs-cloud-page.get-started" defaultMessage="Quick Start Guide" />
               </Button>
             </div>
@@ -119,7 +119,7 @@ function HubsCloudPage() {
 
 window.APP = { store };
 
-function Root() {
+function CloudRoot() {
   return (
     <WrappedIntlProvider>
       <ThemeProvider store={store}>
@@ -132,5 +132,8 @@ function Root() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  ReactDOM.render(<Root />, document.getElementById("ui-root"));
+  const container = document.getElementById("ui-root");
+
+  const root = createRoot(container);
+  root.render(<CloudRoot />);
 });
